@@ -1,0 +1,3 @@
+access-list outside2_access_in extended permit tcp any object dmz_vip_click-dev.groupama.hu eq 80
+access-list acl_ra_ggb.tavmunka extended permit tcp object vpn_net_172.22.28.0-22_SMSVPNpool object int_hst_prodapp063 eq 8580
+access-list vlan426_multicast standard deny host 224.0.0.18
