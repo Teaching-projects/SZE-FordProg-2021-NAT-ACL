@@ -18,7 +18,8 @@ tokens = [
     'EQ',
     'LT',
     'GT',
-    'IPADDR'
+    'IPADDR',
+    'MASK'
 ]
 
 def t_ACCESSLIST(t):
@@ -80,6 +81,7 @@ def t_LT(t):
 t_ENTITYNAME = r'[a-zA-Z]+[a-zA-Z0-9\_\.\-]*'
 t_INT = r'[0-9]+'
 t_IPADDR = r'(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])'
+t_MASK = r'(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])'
 t_ignore = r' \n'
 
 def t_error(t):
@@ -88,15 +90,83 @@ def t_error(t):
 
 lexer = lex.lex()
 
+def p_acl(p):
+    '''
+    acl : ACCESSLIST ENTITYNAME type
+    '''
+    p[0]=(p[1], p[2], p[3])
+
+def p_type(p):
+    '''
+    type :  STANDARD action place
+            | EXTENDED action proto place service
+            | EXTENDED action proto place place service
+    '''
+    if len(p)==4: p[0]=(p[1], p[2], p[3])
+    elif len(p)==6: p[0]=(p[1], p[2], p[3], p[4], p[5])
+    else: p[0]=(p[1], p[2], p[3], p[4], p[5], p[6])
+
+def p_action(p):
+    '''
+    action :    PERMIT
+                | DENY
+    '''
+    p[0]=p[1]
+    
+def p_proto(p):
+    '''
+    proto :    TCP
+               | UDP
+               | IP
+    '''
+    p[0]=p[1]
+
+def p_place(p):
+    '''
+    place :    ANY
+               | IPADDR MASK
+               | HOST IPADDR
+               | OBJECT ENTITYNAME
+    '''
+    if len(p)==3: p[0]=(p[1], p[2])
+    else: p[0]=p[1]
+
+def p_service(p):
+    '''
+    service :   EQ INT
+                | LT INT
+                | GT INT
+                | empty
+    '''
+    if len(p)==3: p[0]=(p[1], p[2])
+    else: p[0]=p[1]
+
+def p_empty(p):
+    '''
+    empty : 
+    '''
+    p[0]=None
+    
+def p_error(p):
+    print('Syntax error!')
+
+parser=yacc.yacc()
+
+
+
 data=''
 with open('example.txt', 'r') as f:
-    data=f.read().split()
+    data=f.read().split('\n')
 
-print(data)
+#print(data)
+
+# for i in data:
+    # lexer.input(i)
+    # while True:
+        # tok = lexer.token()
+        # if not tok: break
+        # print(tok.type, tok.value)
 
 for i in data:
-    lexer.input(i)
-    while True:
-        tok = lexer.token()
-        if not tok: break
-        print(tok.type, tok.value)
+    parser.parse(i)
+    
